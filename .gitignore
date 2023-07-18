@@ -1,0 +1,5 @@
+ht16k33*
+.idea
+*~
+__pycache__
+config*.json
