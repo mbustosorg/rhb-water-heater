@@ -95,7 +95,6 @@ async def run_server(saddr, port, handler):
                     elif res[1] & select.POLLIN:
                         buf, addr = sock.recvfrom(MAX_DGRAM_SIZE)
                         handler(buf, addr)
-                print(f"OSC tick {ticks_ms()}")
                 led.toggle()
                 await asyncio.sleep(1)
             except Exception as e:
@@ -105,5 +104,3 @@ async def run_server(saddr, port, handler):
         #reboot()
     except Exception as e:
         print(f"{e}")
-
-
