@@ -10,6 +10,7 @@ except ImportError:
 
     
 from uosc.server import split_oscstr, parse_message
+from uosc.client import Bundle, Client, create_message
 
 from ht16k33segment import HT16K33Segment
 
@@ -49,7 +50,7 @@ def manage_heater(temp: int):
         print(e)
 
 
-def handle_osc(data, src, dispatch=None, strict=False):
+async def handle_osc(data, src, dispatch=None, strict=False):
     """Process any new OSC messages about pressure"""
     try:
         head, _ = split_oscstr(data, 0)
@@ -64,20 +65,26 @@ def handle_osc(data, src, dispatch=None, strict=False):
 
     try:
         for timetag, (oscaddr, tags, args) in messages:
-            bcd = int(str(int(args[0])), 16)
+            if ("pressure" not in oscaddr) or \
+               ("upper_temp" not in oscaddr) or \
+               ("lower_temp" not in oscaddr):
+                continue
 
             if "pressure" in oscaddr:
+                bcd = int(str(int(args[0])), 16)
                 rhb_pico_utils.display.set_number((bcd & 0xF0) >> 4, 0)
                 rhb_pico_utils.display.set_number((bcd & 0x0F), 1)
-            elif "temperature" in oscaddr and "cpu" not in oscaddr:
-                if int(args[0]) > 100:
-                    rhb_pico_utils.display.set_blink_rate(1)
-                else:
-                    rhb_pico_utils.display.set_blink_rate(0)
-                rhb_pico_utils.display.set_number((bcd & 0xF0) >> 4, 2)
-                rhb_pico_utils.display.set_number((bcd & 0x0F), 3)
-                manage_heater(int(args[0]))
-            rhb_pico_utils.display.draw()
+                rhb_pico_utils.display.draw()
+            elif "upper_temp" in oscaddr:
+                config["UPPER_TEMP"] = int(args[0])
+                TEMP_UPPER = config["UPPER_TEMP"]
+                with open(CONFIG_FILE, "w", encoding="utf-8") as writer:
+                    json.dump(config, writer, ensure_ascii=False, indent=4)
+            elif "lower_temp" in oscaddr:
+                config["LOWER_TEMP"] = int(args[0])
+                TEMP_UPPER = config["LOWER_TEMP"]
+                with open(CONFIG_FILE, "w", encoding="utf-8") as writer:
+                    json.dump(config, writer, ensure_ascii=False, indent=4)
             if __debug__:
                 print(f"{time()} OSC message : {oscaddr} {tags} {args}")
 
@@ -96,7 +103,24 @@ async def temp_loop():
                 temp = int(float(ds.read_temp(rom)) * 9.0 / 5.0 + 32.0)
             print(f"Temperature: {temp}")
             manage_heater(temp)
-            await asyncio.sleep(1)
+            bcd = int(str(int(temp)), 16)
+            if temp > 100:
+                rhb_pico_utils.display.set_number(0, 2)
+                rhb_pico_utils.display.set_number(0, 3)
+            else:
+                rhb_pico_utils.display.set_number((bcd & 0xF0) >> 4, 2)
+                rhb_pico_utils.display.set_number((bcd & 0x0F), 3)
+            rhb_pico_utils.display.draw()
+            for client in mobile_clients:
+                client.send("/temperature", temp)
+                client.close()
+                client.send("/water_heater", float(state["heater_status"]))
+                client.close()
+                client.send("/upper_temp", config["UPPER_TEMP"])
+                client.close()
+                client.send("/lower_temp", config["LOWER_TEMP"])
+                client.close()
+            await asyncio.sleep(5)
         except Exception as e:
             print(f"Exception in temp_loop: {e}")
             break
@@ -116,6 +140,7 @@ async def main_loop():
 
 
 if __name__ == "__main__":
+    
     rhb_pico_utils.led = Pin("LED", Pin.OUT)
     rhb_pico_utils.led.off()
     ow = onewire.OneWire(Pin(28, Pin.IN))
@@ -126,17 +151,18 @@ if __name__ == "__main__":
     heater_pin = Pin(3, Pin.OUT)
     heater_pin.off()
 
-    HEATER_RESET = 600000
-    TEMP_UPPER = 75
-    TEMP_LOWER = 70
-
     state = {
         "heater_status": 0,
         "cooling_down": False,
     }
 
-    with open("config_home.json") as f:
+    CONFIG_FILE = "config_rhb.json"
+    with open(CONFIG_FILE) as f:
         config = json.load(f)
+
+    HEATER_RESET = 600000
+    TEMP_UPPER = config["UPPER_TEMP"]
+    TEMP_LOWER = config["LOWER_TEMP"]
 
     i2c = I2C(0, scl=Pin(17), sda=Pin(16))
     devices = i2c.scan()
@@ -146,6 +172,8 @@ if __name__ == "__main__":
     rhb_pico_utils.display = HT16K33Segment(i2c)
     rhb_pico_utils.display.set_brightness(15)
     
+    mobile_clients = list(map(lambda x: Client(x, 8888), config["MOBILE_CLIENTS"].split(",")))
+    list(map(lambda x: print(f"{x.dest}"), mobile_clients))
     try:
         toggle_startup_display(1)
         wlan = wifi_connection(config)
