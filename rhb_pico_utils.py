@@ -65,6 +65,7 @@ def wifi_connection(config):
             sleep(1)
         if wlan.status() != 3:
             print(f'network connection failed, retrying {wlan.status()}')
+            return None
         else:
             print('connected')
             status = wlan.ifconfig()

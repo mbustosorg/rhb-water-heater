@@ -24,6 +24,11 @@ import rhb_pico_utils
 def manage_heater(temp: int):
     """Water heater and pump state machine"""
     try:
+        if state["safety_shutdown"]:
+            heater_pin.off()
+            pump_pin.off()
+            safety_shutdown.on()
+            return            
         if state["heater_status"] and temp >= TEMP_UPPER:
             state["cooling_down"] = True
             state["heater_status"] = 0
@@ -31,15 +36,19 @@ def manage_heater(temp: int):
             pump_pin.off()
             rhb_pico_utils.display.set_blink_rate(0)
             print("Heater shutdown")
-        elif not state["heater_status"] and temp < TEMP_LOWER:
+        elif not state["heater_status"] and temp <= TEMP_LOWER:
             state["heater_status"] = ticks_ms()
             state["cooling_down"] = False
+            state["temp_at_heater_start"] = temp
             rhb_pico_utils.display.set_blink_rate(2)
             pump_pin.on()
             sleep(2)
             heater_pin.on()
             print("Heater startup")
         elif not state["cooling_down"] and temp < TEMP_UPPER and (ticks_ms() - state["heater_status"]) > HEATER_RESET:
+            if temp <= state["temp_at_heater_start"] - 1:
+                state["safety_shutdown"] = True
+                return
             state["heater_status"] = ticks_ms()
             pump_pin.on()
             heater_pin.off()
@@ -65,9 +74,7 @@ async def handle_osc(data, src, dispatch=None, strict=False):
 
     try:
         for timetag, (oscaddr, tags, args) in messages:
-            if ("pressure" not in oscaddr) or \
-               ("upper_temp" not in oscaddr) or \
-               ("lower_temp" not in oscaddr):
+            if ("pressure" not in oscaddr):
                 continue
 
             if "pressure" in oscaddr:
@@ -75,50 +82,46 @@ async def handle_osc(data, src, dispatch=None, strict=False):
                 rhb_pico_utils.display.set_number((bcd & 0xF0) >> 4, 0)
                 rhb_pico_utils.display.set_number((bcd & 0x0F), 1)
                 rhb_pico_utils.display.draw()
-            elif "upper_temp" in oscaddr:
-                config["UPPER_TEMP"] = int(args[0])
-                TEMP_UPPER = config["UPPER_TEMP"]
-                with open(CONFIG_FILE, "w", encoding="utf-8") as writer:
-                    json.dump(config, writer, ensure_ascii=False, indent=4)
-            elif "lower_temp" in oscaddr:
-                config["LOWER_TEMP"] = int(args[0])
-                TEMP_UPPER = config["LOWER_TEMP"]
-                with open(CONFIG_FILE, "w", encoding="utf-8") as writer:
-                    json.dump(config, writer, ensure_ascii=False, indent=4)
             if __debug__:
                 print(f"{time()} OSC message : {oscaddr} {tags} {args}")
 
             if dispatch:
                 dispatch(timetag, (oscaddr, tags, args, src))
     except Exception as exc:
-        print("Exception in OSC handler: %s", exc)
+        print(f"Exception in OSC handler: {exc} {data} {src}")
+
+
+def read_and_display_temp():
+    """Specific loop for temp reading"""
+    ds.convert_temp()
+    for rom in roms:
+        temp = int(float(ds.read_temp(rom)) * 9.0 / 5.0 + 32.0)
+    print(f"Temperature: {temp}")
+    manage_heater(temp)
+    bcd = int(str(int(temp)), 16)
+    if temp >= 100:
+        rhb_pico_utils.display.set_number(0, 2)
+        rhb_pico_utils.display.set_number(0, 3)
+    else:
+        rhb_pico_utils.display.set_number((bcd & 0xF0) >> 4, 2)
+        rhb_pico_utils.display.set_number((bcd & 0x0F), 3)
+    rhb_pico_utils.display.draw()
+    return temp
 
 
 async def temp_loop():
     """Main temp processing loop"""
     while True:
         try:
-            ds.convert_temp()
-            for rom in roms:
-                temp = int(float(ds.read_temp(rom)) * 9.0 / 5.0 + 32.0)
-            print(f"Temperature: {temp}")
-            manage_heater(temp)
-            bcd = int(str(int(temp)), 16)
-            if temp > 100:
-                rhb_pico_utils.display.set_number(0, 2)
-                rhb_pico_utils.display.set_number(0, 3)
-            else:
-                rhb_pico_utils.display.set_number((bcd & 0xF0) >> 4, 2)
-                rhb_pico_utils.display.set_number((bcd & 0x0F), 3)
-            rhb_pico_utils.display.draw()
+            temp = read_and_display_temp()
             for client in mobile_clients:
-                client.send("/temperature", temp)
+                client.send("/temperature", float(temp))
                 client.close()
                 client.send("/water_heater", float(state["heater_status"]))
                 client.close()
-                client.send("/upper_temp", config["UPPER_TEMP"])
+                client.send("/upper_temp", float(config["UPPER_TEMP"]))
                 client.close()
-                client.send("/lower_temp", config["LOWER_TEMP"])
+                client.send("/lower_temp", float(config["LOWER_TEMP"]))
                 client.close()
             await asyncio.sleep(5)
         except Exception as e:
@@ -150,10 +153,14 @@ if __name__ == "__main__":
     pump_pin.off()
     heater_pin = Pin(3, Pin.OUT)
     heater_pin.off()
+    safety_shutdown = Pin(, Pin.OUT)
+    satefy_shutdown.off()
 
     state = {
         "heater_status": 0,
         "cooling_down": False,
+        "temp_at_heater_start": 0,
+        "safety_shutdown": False
     }
 
     CONFIG_FILE = "config_rhb.json"
@@ -171,12 +178,17 @@ if __name__ == "__main__":
             print(f"I2C device found: {hex(d)}")
     rhb_pico_utils.display = HT16K33Segment(i2c)
     rhb_pico_utils.display.set_brightness(15)
-    
+
+    wlan = None
+    while not wlan:
+        toggle_startup_display(1)
+        wlan = wifi_connection(config)
+        read_and_display_temp()
+        sleep(10)
+
     mobile_clients = list(map(lambda x: Client(x, 8888), config["MOBILE_CLIENTS"].split(",")))
     list(map(lambda x: print(f"{x.dest}"), mobile_clients))
     try:
-        toggle_startup_display(1)
-        wlan = wifi_connection(config)
         sync_text = b"\x40\x40\x40\x40" # ----
         for i in range(len(sync_text)):
             rhb_pico_utils.display.set_glyph(sync_text[i], i)
