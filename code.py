@@ -94,6 +94,32 @@ def shutdown_heater(reason):
         rhb_utils.display.blink_rate = 0
 
 
+def scan_probes():
+    """Enumerate the bath probes and put them in 9 bit mode.
+
+    The reading is used as whole degrees F, so 12 bit resolution -- the
+    library default -- resolves 0.0625C that is thrown away by the int().
+    It costs 750ms of conversion per read against 94ms at 9 bit (0.5C), and
+    that conversion is a tight poll of a bit-banged bus with the event loop
+    blocked behind it.  Eight times less exposure for no visible loss.
+
+    The setting lives in the scratchpad, not EEPROM, so it has to be applied
+    every time the probe is enumerated.
+    """
+    try:
+        found = [adafruit_ds18x20.DS18X20(ow, d) for d in ow.scan()]
+    except Exception as exception:
+        print("OneWire scan failed:", exception)
+        return []
+    for sensor in found:
+        try:
+            sensor.resolution = 9
+        except Exception as exception:
+            print("Could not set probe resolution:", exception)
+    print(f"OneWire probes: {len(found)}")
+    return found
+
+
 def read_and_display_temp():
     """Read the bath probe and display it.  None when there is no reading.
 
@@ -107,10 +133,7 @@ def read_and_display_temp():
     if not ds_sensors:
         # The probe can miss the boot-time scan.  Look again rather than run
         # blind until somebody power-cycles the board.
-        try:
-            ds_sensors = [adafruit_ds18x20.DS18X20(ow, d) for d in ow.scan()]
-        except Exception as e:
-            print("OneWire scan failed:", e)
+        ds_sensors = scan_probes()
     temp = None
     for sensor in ds_sensors:
         try:
@@ -392,7 +415,7 @@ safety_shutdown_pin.value = False
 pressure_adc = analogio.AnalogIn(board.IO1)
 
 ow = adafruit_onewire.bus.OneWireBus(board.IO15)
-ds_sensors = [adafruit_ds18x20.DS18X20(ow, d) for d in ow.scan()]
+ds_sensors = scan_probes()
 
 i2c = busio.I2C(board.IO38, board.IO39)  # SCL=IO38, SDA=IO39
 rhb_utils.display = segments.Seg7x4(i2c)
