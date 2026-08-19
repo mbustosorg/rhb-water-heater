@@ -73,6 +73,12 @@ def propane_pressure_handler(msg):
     """
     if msg.addr != "/pressure":
         return
+    # Say so once per connection.  Silence here is ambiguous otherwise: a
+    # display that never changes looks the same whether the monitor has gone
+    # quiet or the read path has stopped dispatching.
+    if not _pressure_seen[0]:
+        _pressure_seen[0] = True
+        print(f"Receiving /pressure, first value {msg.args[0]}")
     rhb_utils.set_two_digits(msg.args[0], 0, 1)
 
 
@@ -259,6 +265,7 @@ async def connect_network():
         else None
     )
     pool.setdefaulttimeout(None)
+    _pressure_seen[0] = False
     if rhb_utils.display:
         for i in range(2):
             rhb_utils.display.set_digit_raw(i, 0x40)  # -- until /pressure arrives
@@ -383,6 +390,7 @@ RX_TIMEOUT = 0.05
 RX_BUFFER = 512
 MAX_SKIP_CYCLES = 12
 _fail_counts = {}
+_pressure_seen = [False]
 _skip_cycles = {}
 HEATER_RESET = 600000
 CONNECT_TIMEOUT = 20
