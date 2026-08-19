@@ -65,7 +65,14 @@ def manage_heater(temp):
 
 
 def propane_pressure_handler(msg):
-    """Accumulator pressure, owned by rhb-sensor-monitor.  Receive only."""
+    """Accumulator pressure, owned by rhb-sensor-monitor.  Receive only.
+
+    microosc dispatches on msg.addr.startswith(key), so this is also handed
+    /pressure_fine -- the unrounded value on the same prefix.  Match exactly;
+    these two digits show the rounded one.
+    """
+    if msg.addr != "/pressure":
+        return
     rhb_utils.set_two_digits(msg.args[0], 0, 1)
 
 
@@ -204,6 +211,16 @@ async def connect_network():
         count += 1
         await asyncio.sleep(0.5)
     osc_server = microosc.OSCServer(pool, config["IP"], OSC_PORT, dispatch_map)
+    # microosc hardcodes a 1ms timeout on the receive socket.  Every
+    # _available() and read_udp() is an SPI transaction to the W5500, so a
+    # real read cannot finish inside 1ms: it consumes the bytes and then
+    # raises ETIMEDOUT, which poll() swallows as "no data".  The packets
+    # arrive, drain out of the chip, and are never dispatched.
+    osc_server._sock.settimeout(RX_TIMEOUT)
+    # microosc sizes its receive buffer at 128 bytes.  A datagram longer than
+    # that can only be read in part, and the leftover desynchronises every
+    # read after it.
+    osc_server._buf = bytearray(RX_BUFFER)
     mobile_endpoints = client_endpoints(config["MOBILE_CLIENTS"])
     # One socket for every listener.  microosc.OSCClient holds a socket for its
     # lifetime and the W5500 only has eight of them, so a client per listener
@@ -238,10 +255,56 @@ async def network_loop():
         await asyncio.sleep(1)
 
 
+def poll_osc():
+    """Read exactly one datagram and dispatch it.  Never raises.
+
+    Not osc_server.poll(), and not recvfrom_into either.  Both keep calling
+    read_udp until they have as many bytes as were asked for, and read_udp
+    parses an 8 byte UDP header on every call -- so once a read stops part
+    way through a datagram, the next one reads payload as a header and the
+    stream is desynchronised.  microosc's read_string() then finds no null
+    terminator and raises ValueError, which poll() does not catch: it escapes
+    osc_loop and reboots the board.
+
+    read_udp takes the length from the datagram's own header, so asking it
+    for the whole buffer returns one datagram and stops on the boundary.
+    """
+    sock = osc_server._sock
+    try:
+        if sock._available() <= 0:
+            return
+        length, data = sock._interface.read_udp(sock._socknum, len(osc_server._buf))
+    except Exception as exception:
+        print("OSC read failed:", exception)
+        return
+    if not length:
+        return
+    osc_server._buf[:length] = data
+    try:
+        message = microosc.parse_osc_packet(osc_server._buf, length)
+    except Exception as exception:
+        # The header parse has drifted off a datagram boundary and read
+        # payload as a length.  Throw away what is queued so the next read
+        # starts clean rather than compounding the error.
+        print(f"Discarding {length} byte OSC packet: {exception}")
+        for _ in range(8):
+            try:
+                if sock._available() <= 0:
+                    break
+                sock._interface.read_udp(sock._socknum, len(osc_server._buf))
+            except Exception:
+                break
+        return
+    try:
+        osc_server._dispatch(message)
+    except Exception as exception:
+        print(f"Handler for {message.addr} failed: {exception}")
+
+
 async def osc_loop():
     while True:
         if osc_server:
-            osc_server.poll()
+            poll_osc()
         await asyncio.sleep(0)
 
 
@@ -293,6 +356,8 @@ OSC_PORT = 8888
 # than a wired host -- but still bounded so an absent listener cannot stall
 # the loop.  The W5500 caches the resolution, so only the first send waits.
 SEND_TIMEOUT = 0.5
+RX_TIMEOUT = 0.05
+RX_BUFFER = 512
 MAX_SKIP_CYCLES = 12
 _fail_counts = {}
 _skip_cycles = {}
