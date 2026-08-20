@@ -24,42 +24,39 @@ import adafruit_ds18x20
 import microosc
 import rhb_utils
 
-def manage_heater(temp):
+def manage_pump(temp):
+    """Circulate while the bath is cold.
+
+    Pump only -- this rig has no heater.  heater_pin is never driven high
+    anywhere in this file; it is initialised low and left there.
+
+    state["heater_status"] is the pump's state despite the name.  It is what
+    /water_heater carries, and rhb-sensor-monitor and the body display
+    already key on that address.
+
+    There was a ten minute recycle here that latched safety_shutdown when the
+    bath had not warmed.  It policed the heater, and with no heater the bath
+    only ever cools -- so it would trip every time and latch the pump off for
+    good.  It went with the heater.
+    """
     try:
         if state["safety_shutdown"]:
-            heater_pin.value = False
             pump_pin.value = False
             safety_shutdown_pin.value = True
             return
         if state["heater_status"] and temp >= TEMP_UPPER:
-            state["cooling_down"] = True
             state["heater_status"] = 0
-            heater_pin.value = False
             pump_pin.value = False
             if rhb_utils.display:
                 rhb_utils.display.blink_rate = 0
-            print("Heater shutdown")
+            print("Pump shutdown")
         elif not state["heater_status"] and temp <= TEMP_LOWER:
             state["heater_status"] = supervisor.ticks_ms()
-            state["cooling_down"] = False
             state["temp_at_heater_start"] = temp
             if rhb_utils.display:
                 rhb_utils.display.blink_rate = 2
             pump_pin.value = True
-            time.sleep(2)
-            heater_pin.value = True
-            print("Heater startup")
-        elif (not state["cooling_down"] and temp < TEMP_UPPER
-              and (supervisor.ticks_ms() - state["heater_status"]) > HEATER_RESET):
-            if temp <= state["temp_at_heater_start"] - 1:
-                state["safety_shutdown"] = True
-                return
-            state["heater_status"] = supervisor.ticks_ms()
-            pump_pin.value = True
-            heater_pin.value = False
-            time.sleep(2)
-            heater_pin.value = True
-            print(f"Recycle heater at {temp}")
+            print("Pump startup")
     except Exception as e:
         print(e)
 
@@ -88,13 +85,11 @@ def read_water_pressure():
     return max(0.0, (sensor_voltage - 0.5) / 4.0 * 100.0)
 
 
-def shutdown_heater(reason):
-    """Drop the heater and pump.  Safe to call from any state."""
-    if state["heater_status"] or pump_pin.value or heater_pin.value:
-        print(f"Heater off: {reason}")
+def shutdown_pump(reason):
+    """Drop the pump.  Safe to call from any state."""
+    if state["heater_status"] or pump_pin.value:
+        print(f"Pump off: {reason}")
     state["heater_status"] = 0
-    state["cooling_down"] = False
-    heater_pin.value = False
     pump_pin.value = False
     if rhb_utils.display:
         rhb_utils.display.blink_rate = 0
@@ -130,10 +125,8 @@ def read_and_display_temp():
     """Read the bath probe and display it.  None when there is no reading.
 
     A probe that is missing or unreadable must never come back as 0F.  That
-    is below TEMP_LOWER, so manage_heater would light the heater on a
-    temperature nobody measured, and the recycle check compares against
-    temp_at_heater_start -- also 0 -- so the safety shutdown never fires and
-    it reheats every HEATER_RESET forever.  No reading means heater off.
+    is below TEMP_LOWER, so manage_pump would run the pump on a temperature
+    nobody measured.  No reading means pump off.
     """
     global ds_sensors
     if not ds_sensors:
@@ -153,13 +146,13 @@ def read_and_display_temp():
             print(f"Implausible probe reading {reading}F ignored")
     if temp is None:
         print("Temperature: no reading")
-        shutdown_heater("no usable temperature reading")
+        shutdown_pump("no usable temperature reading")
         if rhb_utils.display:
             for i in (2, 3):
                 rhb_utils.display.set_digit_raw(i, 0x40)  # --, no reading
         return None
     print(f"Temperature: {temp}")
-    manage_heater(temp)
+    manage_pump(temp)
     if rhb_utils.display:
         rhb_utils.display[2] = str((temp // 10) % 10)
         rhb_utils.display[3] = str(temp % 10)
@@ -392,7 +385,6 @@ MAX_SKIP_CYCLES = 12
 _fail_counts = {}
 _pressure_seen = [False]
 _skip_cycles = {}
-HEATER_RESET = 600000
 CONNECT_TIMEOUT = 20
 CONNECT_RETRY = 60
 TEMP_UPPER = config["UPPER_TEMP"]
@@ -402,8 +394,9 @@ TEMP_PLAUSIBLE_LOW = 33
 TEMP_PLAUSIBLE_HIGH = 212
 
 state = {
+    # Named for the address it is published on, /water_heater.  It is the
+    # pump's state; see manage_pump.
     "heater_status": 0,
-    "cooling_down": False,
     "temp_at_heater_start": 0,
     "safety_shutdown": False,
 }

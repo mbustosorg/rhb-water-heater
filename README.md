@@ -1,12 +1,15 @@
 Red Hot Beverly Water Heater
 ============================
 
-Heats and circulates the water bath, and owns everything the rest of the rig
-knows about it.  Runs on a Waveshare ESP32-S3-ETH (CircuitPython) at
-192.168.1.9, wired -- the W5500 is the only interface, there is no WiFi.
+Circulates the water bath, and owns everything the rest of the rig knows
+about it.  Runs on a Waveshare ESP32-S3-ETH (CircuitPython) at 192.168.1.9,
+wired -- the W5500 is the only interface, there is no WiFi.
 
-The board switches a pump and a heater against a DS18B20 in the bath, reads
-the loop pressure, and drives a four digit HT16K33 display.
+The board switches a pump against a DS18B20 in the bath, reads the loop
+pressure, and drives a four digit HT16K33 display.
+
+There is no heater.  `heater_pin` (IO47) is initialised low and nothing
+drives it high; the relay is left in the design so it can come back.
 
 OSC messages
 ------------
@@ -19,8 +22,8 @@ re-broadcast.
 | Address | Direction | Payload |
 | --- | --- | --- |
 | `/temperature` | out | Bath temperature, deg F.  The only temperature on the network |
-| `/water_heater` | out | Heater on/off |
-| `/upper_temp`, `/lower_temp` | out | Configured setpoints, deg F |
+| `/water_heater` | out | Pump on/off.  Named for the heater it used to switch |
+| `/upper_temp`, `/lower_temp` | out | Configured pump setpoints, deg F |
 | `/water_pressure` | out | Bath loop pressure, PSI |
 | `/pressure` | in, from rhb-sensor-monitor | Accumulator pressure, PSI, rounded |
 
@@ -41,7 +44,7 @@ Display
 | 2-3 | Bath temperature |
 
 `--` on a pair means no data: no `/pressure` has arrived yet, or the probe
-gave no usable reading.  The display blinks while the heater is on.
+gave no usable reading.  The display blinks while the pump is running.
 
 Configuration
 -------------
@@ -52,46 +55,48 @@ Configuration
 | --- | --- |
 | `IP` | This device's static address |
 | `MOBILE_CLIENTS` | Comma separated listeners, `host` or `host:port` |
-| `UPPER_TEMP` | Heater off at or above, deg F |
-| `LOWER_TEMP` | Heater on at or below, deg F |
+| `UPPER_TEMP` | Pump off at or above, deg F |
+| `LOWER_TEMP` | Pump on at or below, deg F |
 
 The rig is statically addressed and has no DHCP server on the wired side,
 so the interface is configured from `IP` directly.  Never call `set_dhcp()`
 here: it blocks until it gets a lease that never comes, and with the event
-loop behind it that stops the heater as well as the network.
+loop behind it that stops the pump as well as the network.
 
 Listeners on a port other than 8888 are written `host:port` -- the body
 display is `192.168.1.3:10002`.  Several entries are phones that are absent
 most of the time; a listener that fails is skipped for a growing number of
 cycles rather than being waited on every time.
 
-Heater control
---------------
-
-The pump starts two seconds before the heater, every time, including on the
-ten minute recycle.  That interlock is deliberate: do not make it
-concurrent.
+Pump control
+------------
 
 | Condition | Action |
 | --- | --- |
-| Temperature at or below `LOWER_TEMP` | Pump on, then heater on |
-| Temperature at or above `UPPER_TEMP` | Heater and pump off |
-| Ten minutes on, temperature fell by 1F or more | Safety shutdown, latched |
-| Ten minutes on, otherwise | Recycle the heater |
-| No usable temperature reading | Heater and pump off |
+| Temperature at or below `LOWER_TEMP` | Pump on |
+| Temperature at or above `UPPER_TEMP` | Pump off |
+| Between the two | Whatever it was already doing |
+| No usable temperature reading | Pump off |
+
+The band is hysteretic: once running it keeps running until `UPPER_TEMP`,
+and once stopped it stays stopped until `LOWER_TEMP`.  With nothing heating
+the bath it will normally just circulate.
 
 A missing or unreadable probe is never treated as a temperature.  It used to
-come back as 0F, which is below any setpoint, so the heater lit on a reading
-nobody measured -- and because the safety check compares against the
-temperature at heater start, also 0, it could never fire.  Readings outside
-33-212F are discarded for the same reason.
+come back as 0F, below any setpoint.  Readings outside 33-212F are discarded
+for the same reason.
+
+There was a ten minute recycle that latched a safety shutdown when the bath
+had not warmed.  It policed the heater, and with no heater the bath only
+ever cools, so it would have tripped every time and latched the pump off for
+good.  It went with the heater.
 
 Hardware
 --------
 
 | Pin | Use |
 | --- | --- |
-| IO47 | Heater relay |
+| IO47 | Heater relay, never driven |
 | IO48 | Pump relay |
 | IO3 | Safety shutdown |
 | IO1 | Loop pressure, analogue |
@@ -116,9 +121,13 @@ seconds; much longer means something is blocking the event loop.
 Known rough edges
 -----------------
 
-The ten minute check only fires when the temperature has *fallen*.  A bath
-that sits perfectly flat for ten minutes of heating means the heater is not
-working, but that passes the test and simply recycles, indefinitely.
+`/water_heater` reports the pump.  The address kept its name so that
+rhb-sensor-monitor's `water_*.csv` and the body display did not have to
+change; `state["heater_status"]` is the pump's state for the same reason.
+
+The pump stops on any unusable probe reading, and the OneWire bus throws
+CRC errors regularly -- so a flaky probe short cycles the pump.  That
+mattered less when the rule was protecting a heater.
 
 The OneWire bus throws CRC errors regularly, and has returned an empty scan
 at boot.  The software recovers from both, but the cause is physical --
