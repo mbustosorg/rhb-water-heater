@@ -1,15 +1,16 @@
 Red Hot Beverly Water Heater
 ============================
 
-Circulates the water bath, and owns everything the rest of the rig knows
-about it.  Runs on a Waveshare ESP32-S3-ETH (CircuitPython) at 192.168.1.9,
-wired -- the W5500 is the only interface, there is no WiFi.
+Controls the water bath's solenoid valve, and reports what the rest of the
+rig knows about the bath.  Runs on a Waveshare ESP32-S3-ETH (CircuitPython)
+at 192.168.1.9, wired -- the W5500 is the only interface, there is no WiFi.
 
-The board switches a pump against a DS18B20 in the bath, reads the loop
-pressure, and drives a four digit HT16K33 display.
+The board switches the valve on IO48 against a DS18B20 in the bath, reads
+the loop pressure, and drives a four digit HT16K33 display.
 
-There is no heater.  `heater_pin` (IO47) is initialised low and nothing
-drives it high; the relay is left in the design so it can come back.
+There is still a heater in the system, but this board does not control it.
+`heater_pin` (IO47) is initialised low and nothing drives it high; the relay
+is left in the design so it can come back.
 
 OSC messages
 ------------
@@ -22,8 +23,8 @@ re-broadcast.
 | Address | Direction | Payload |
 | --- | --- | --- |
 | `/temperature` | out | Bath temperature, deg F.  The only temperature on the network |
-| `/water_heater` | out | Pump on/off.  Named for the heater it used to switch |
-| `/upper_temp`, `/lower_temp` | out | Configured pump setpoints, deg F |
+| `/water_heater` | out | Valve open/shut.  Named for the heater it used to switch |
+| `/upper_temp`, `/lower_temp` | out | Configured valve setpoints, deg F |
 | `/water_pressure` | out | Bath loop pressure, PSI |
 | `/pressure` | in, from rhb-sensor-monitor | Accumulator pressure, PSI, rounded |
 
@@ -44,7 +45,7 @@ Display
 | 2-3 | Bath temperature |
 
 `--` on a pair means no data: no `/pressure` has arrived yet, or the probe
-gave no usable reading.  The display blinks while the pump is running.
+gave no usable reading.  The display blinks while the valve is open.
 
 Configuration
 -------------
@@ -55,49 +56,49 @@ Configuration
 | --- | --- |
 | `IP` | This device's static address |
 | `MOBILE_CLIENTS` | Comma separated listeners, `host` or `host:port` |
-| `UPPER_TEMP` | Pump off at or above, deg F |
-| `LOWER_TEMP` | Pump on at or below, deg F |
+| `UPPER_TEMP` | Valve shuts at or above, deg F |
+| `LOWER_TEMP` | Valve opens at or below, deg F |
 
 The rig is statically addressed and has no DHCP server on the wired side,
 so the interface is configured from `IP` directly.  Never call `set_dhcp()`
 here: it blocks until it gets a lease that never comes, and with the event
-loop behind it that stops the pump as well as the network.
+loop behind it that stops the valve as well as the network.
 
 Listeners on a port other than 8888 are written `host:port` -- the body
 display is `192.168.1.3:10002`.  Several entries are phones that are absent
 most of the time; a listener that fails is skipped for a growing number of
 cycles rather than being waited on every time.
 
-Pump control
-------------
+Valve control
+-------------
 
 | Condition | Action |
 | --- | --- |
-| Temperature at or below `LOWER_TEMP` | Pump on |
-| Temperature at or above `UPPER_TEMP` | Pump off |
+| Temperature at or below `LOWER_TEMP` | Valve opens |
+| Temperature at or above `UPPER_TEMP` | Valve shuts |
 | Between the two | Whatever it was already doing |
-| No usable temperature reading | Pump off |
+| No usable temperature reading | Valve shuts |
 
-The band is hysteretic: once running it keeps running until `UPPER_TEMP`,
-and once stopped it stays stopped until `LOWER_TEMP`.  With nothing heating
-the bath it will normally just circulate.
+The band is hysteretic: once open it stays open until `UPPER_TEMP`, and once
+shut it stays shut until `LOWER_TEMP`.  The heater this board does not
+control is what moves the bath across the band.
 
 A missing or unreadable probe is never treated as a temperature.  It used to
 come back as 0F, below any setpoint.  Readings outside 33-212F are discarded
 for the same reason.
 
 There was a ten minute recycle that latched a safety shutdown when the bath
-had not warmed.  It policed the heater, and with no heater the bath only
-ever cools, so it would have tripped every time and latched the pump off for
-good.  It went with the heater.
+had not warmed.  It policed a heater this board no longer owns, and it
+cannot tell a heater fault from a valve doing its job, so it went with the
+heater.
 
 Hardware
 --------
 
 | Pin | Use |
 | --- | --- |
-| IO47 | Heater relay, never driven |
-| IO48 | Pump relay |
+| IO47 | Heater relay, not driven -- the heater is controlled elsewhere |
+| IO48 | Solenoid valve |
 | IO3 | Safety shutdown |
 | IO1 | Loop pressure, analogue |
 | IO15 | OneWire, DS18B20 bath probe |
@@ -121,13 +122,15 @@ seconds; much longer means something is blocking the event loop.
 Known rough edges
 -----------------
 
-`/water_heater` reports the pump.  The address kept its name so that
+`/water_heater` reports the valve.  The address kept its name so that
 rhb-sensor-monitor's `water_*.csv` and the body display did not have to
-change; `state["heater_status"]` is the pump's state for the same reason.
+change; `state["heater_status"]` is the valve's state for the same reason.
+Nothing else publishes that address today, but whatever controls the real
+heater would be the natural owner of it if it ever did.
 
-The pump stops on any unusable probe reading, and the OneWire bus throws
-CRC errors regularly -- so a flaky probe short cycles the pump.  That
-mattered less when the rule was protecting a heater.
+The valve shuts on any unusable probe reading, and the OneWire bus throws
+CRC errors regularly -- so a flaky probe cycles the valve.  That rule was
+written to make a heater fail safe; it is less obviously right for a valve.
 
 The OneWire bus throws CRC errors regularly, and has returned an empty scan
 at boot.  The software recovers from both, but the cause is physical --

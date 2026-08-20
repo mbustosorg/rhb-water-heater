@@ -24,39 +24,40 @@ import adafruit_ds18x20
 import microosc
 import rhb_utils
 
-def manage_pump(temp):
-    """Circulate while the bath is cold.
+def manage_valve(temp):
+    """Open the solenoid valve while the bath is cold.
 
-    Pump only -- this rig has no heater.  heater_pin is never driven high
-    anywhere in this file; it is initialised low and left there.
+    This board drives the valve on IO48 and nothing else.  There is still a
+    heater in the system, but something else controls it: heater_pin is
+    initialised low and never driven high here.
 
-    state["heater_status"] is the pump's state despite the name.  It is what
+    state["heater_status"] is the valve's state despite the name.  It is what
     /water_heater carries, and rhb-sensor-monitor and the body display
     already key on that address.
 
     There was a ten minute recycle here that latched safety_shutdown when the
-    bath had not warmed.  It policed the heater, and with no heater the bath
-    only ever cools -- so it would trip every time and latch the pump off for
-    good.  It went with the heater.
+    bath had not warmed.  It policed a heater this board no longer owns, and
+    it cannot tell a heater fault from a valve that is doing its job, so it
+    went with the heater.
     """
     try:
         if state["safety_shutdown"]:
-            pump_pin.value = False
+            valve_pin.value = False
             safety_shutdown_pin.value = True
             return
         if state["heater_status"] and temp >= TEMP_UPPER:
             state["heater_status"] = 0
-            pump_pin.value = False
+            valve_pin.value = False
             if rhb_utils.display:
                 rhb_utils.display.blink_rate = 0
-            print("Pump shutdown")
+            print("Valve closed")
         elif not state["heater_status"] and temp <= TEMP_LOWER:
             state["heater_status"] = supervisor.ticks_ms()
             state["temp_at_heater_start"] = temp
             if rhb_utils.display:
                 rhb_utils.display.blink_rate = 2
-            pump_pin.value = True
-            print("Pump startup")
+            valve_pin.value = True
+            print("Valve open")
     except Exception as e:
         print(e)
 
@@ -85,12 +86,12 @@ def read_water_pressure():
     return max(0.0, (sensor_voltage - 0.5) / 4.0 * 100.0)
 
 
-def shutdown_pump(reason):
-    """Drop the pump.  Safe to call from any state."""
-    if state["heater_status"] or pump_pin.value:
-        print(f"Pump off: {reason}")
+def shutdown_valve(reason):
+    """Close the valve.  Safe to call from any state."""
+    if state["heater_status"] or valve_pin.value:
+        print(f"Valve closed: {reason}")
     state["heater_status"] = 0
-    pump_pin.value = False
+    valve_pin.value = False
     if rhb_utils.display:
         rhb_utils.display.blink_rate = 0
 
@@ -125,8 +126,8 @@ def read_and_display_temp():
     """Read the bath probe and display it.  None when there is no reading.
 
     A probe that is missing or unreadable must never come back as 0F.  That
-    is below TEMP_LOWER, so manage_pump would run the pump on a temperature
-    nobody measured.  No reading means pump off.
+    is below TEMP_LOWER, so manage_valve would open the valve on a
+    temperature nobody measured.  No reading means the valve closes.
     """
     global ds_sensors
     if not ds_sensors:
@@ -146,13 +147,13 @@ def read_and_display_temp():
             print(f"Implausible probe reading {reading}F ignored")
     if temp is None:
         print("Temperature: no reading")
-        shutdown_pump("no usable temperature reading")
+        shutdown_valve("no usable temperature reading")
         if rhb_utils.display:
             for i in (2, 3):
                 rhb_utils.display.set_digit_raw(i, 0x40)  # --, no reading
         return None
     print(f"Temperature: {temp}")
-    manage_pump(temp)
+    manage_valve(temp)
     if rhb_utils.display:
         rhb_utils.display[2] = str((temp // 10) % 10)
         rhb_utils.display[3] = str(temp % 10)
@@ -395,15 +396,15 @@ TEMP_PLAUSIBLE_HIGH = 212
 
 state = {
     # Named for the address it is published on, /water_heater.  It is the
-    # pump's state; see manage_pump.
+    # valve's state; see manage_valve.
     "heater_status": 0,
     "temp_at_heater_start": 0,
     "safety_shutdown": False,
 }
 
-pump_pin = digitalio.DigitalInOut(board.IO48)
-pump_pin.direction = digitalio.Direction.OUTPUT
-pump_pin.value = False
+valve_pin = digitalio.DigitalInOut(board.IO48)
+valve_pin.direction = digitalio.Direction.OUTPUT
+valve_pin.value = False
 
 heater_pin = digitalio.DigitalInOut(board.IO47)
 heater_pin.direction = digitalio.Direction.OUTPUT
