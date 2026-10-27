@@ -45,7 +45,8 @@ Display
 | 2-3 | Bath temperature |
 
 `--` on a pair means no data: no `/pressure` has arrived yet, or the probe
-gave no usable reading.  The display blinks while the valve is open.
+gave no usable reading.  The temperature digits blink while the valve is
+open.
 
 Configuration
 -------------

@@ -48,14 +48,10 @@ def manage_valve(temp):
         if state["heater_status"] and temp >= TEMP_UPPER:
             state["heater_status"] = 0
             valve_pin.value = False
-            if rhb_utils.display:
-                rhb_utils.display.blink_rate = 0
             print("Valve closed")
         elif not state["heater_status"] and temp <= TEMP_LOWER:
             state["heater_status"] = supervisor.ticks_ms()
             state["temp_at_heater_start"] = temp
-            if rhb_utils.display:
-                rhb_utils.display.blink_rate = 2
             valve_pin.value = True
             print("Valve open")
     except Exception as e:
@@ -92,8 +88,28 @@ def shutdown_valve(reason):
         print(f"Valve closed: {reason}")
     state["heater_status"] = 0
     valve_pin.value = False
-    if rhb_utils.display:
-        rhb_utils.display.blink_rate = 0
+
+
+def show_bath_digits():
+    """Draw the bath temperature on digits 2 and 3, blanked on the off beat.
+
+    They blink while the valve is open.  The HT16K33's own blink_rate cannot
+    do that: it blinks the whole display, the pressure digits included.  So
+    blink_loop flips _blink_off and redraws, and this blanks just these two.
+    """
+    if not rhb_utils.display:
+        return
+    temp = _bath_temp[0]
+    if state["heater_status"] and _blink_off[0]:
+        glyphs = (0x00, 0x00)
+    elif temp is None:
+        glyphs = (0x40, 0x40)  # --, no reading
+    else:
+        rhb_utils.display[2] = str((temp // 10) % 10)
+        rhb_utils.display[3] = str(temp % 10)
+        return
+    for i, glyph in zip((2, 3), glyphs):
+        rhb_utils.display.set_digit_raw(i, glyph)
 
 
 def scan_probes():
@@ -148,15 +164,13 @@ def read_and_display_temp():
     if temp is None:
         print("Temperature: no reading")
         shutdown_valve("no usable temperature reading")
-        if rhb_utils.display:
-            for i in (2, 3):
-                rhb_utils.display.set_digit_raw(i, 0x40)  # --, no reading
+        _bath_temp[0] = None
+        show_bath_digits()
         return None
     print(f"Temperature: {temp}")
     manage_valve(temp)
-    if rhb_utils.display:
-        rhb_utils.display[2] = str((temp // 10) % 10)
-        rhb_utils.display[3] = str(temp % 10)
+    _bath_temp[0] = temp
+    show_bath_digits()
     return temp
 
 
@@ -332,6 +346,19 @@ async def osc_loop():
         await asyncio.sleep(0)
 
 
+async def blink_loop():
+    """Blink the bath digits at 1Hz while the valve is open.
+
+    Nothing to undo when it closes: read_and_display_temp redraws straight
+    after manage_valve, and show_bath_digits only blanks while it is open.
+    """
+    while True:
+        await asyncio.sleep(BLINK_HALF_PERIOD)
+        _blink_off[0] = not _blink_off[0]
+        if state["heater_status"]:
+            show_bath_digits()
+
+
 async def temp_loop():
     while True:
         try:
@@ -363,6 +390,7 @@ async def main_loop():
             asyncio.create_task(temp_loop()),
             asyncio.create_task(osc_loop()),
             asyncio.create_task(network_loop()),
+            asyncio.create_task(blink_loop()),
         )
     except Exception as e:
         print(e)
@@ -386,6 +414,9 @@ MAX_SKIP_CYCLES = 12
 _fail_counts = {}
 _pressure_seen = [False]
 _skip_cycles = {}
+_bath_temp = [None]
+_blink_off = [False]
+BLINK_HALF_PERIOD = 0.5
 CONNECT_TIMEOUT = 20
 CONNECT_RETRY = 60
 TEMP_UPPER = config["UPPER_TEMP"]
