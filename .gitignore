@@ -3,3 +3,11 @@ ht16k33*
 *~
 __pycache__
 config*.json
+kicad/*.dsn
+kicad/*.ses
+kicad/*.kicad_prl
+kicad/*.rpt
+kicad/*-backups
+kicad/~*.lck
+kicad/fp-info-cache
+kicad/logs
