@@ -78,8 +78,9 @@ def propane_pressure_handler(msg):
 
 def read_water_pressure():
     adc_raw = pressure_adc.value
-    sensor_voltage = (adc_raw / 65535) * 3.3
-    return max(0.0, (sensor_voltage - 0.5) / 4.0 * 100.0)
+    sensor_voltage = (adc_raw / 65535) * 3.3 * PRESSURE_DIVIDER
+    psi = (sensor_voltage - PRESSURE_ZERO_V) / PRESSURE_SPAN_V * PRESSURE_FULL_PSI
+    return max(0.0, psi)
 
 
 def shutdown_valve(reason):
@@ -446,6 +447,24 @@ safety_shutdown_pin.direction = digitalio.Direction.OUTPUT
 safety_shutdown_pin.value = False
 
 pressure_adc = analogio.AnalogIn(board.IO1)
+
+# Water pressure transducer on IO1.  See HARDWARE.md, "Pressure, J6".
+#
+# PRESSURE_DIVIDER undoes the divider in front of IO1: 1.0 wired straight
+# to the pin, 1.5 on the carrier board, whose 10k/20k divider scales the
+# sensor's output by 2/3.
+#
+# PRESSURE_ZERO_V is the sensor's output at 0 PSI and PRESSURE_SPAN_V its
+# rise from there to PRESSURE_FULL_PSI, its rated full scale.  The defaults
+# are the datasheet's 0.5-4.5V.  To calibrate, print sensor_voltage in
+# read_water_pressure open to air (that is PRESSURE_ZERO_V) and again at a
+# known gauge pressure P:
+#     PRESSURE_SPAN_V = (V_at_P - PRESSURE_ZERO_V) * PRESSURE_FULL_PSI / P
+# The two numbers absorb divider tolerance, the 5V rail and ADC gain.
+PRESSURE_DIVIDER = 1.0
+PRESSURE_ZERO_V = 0.5
+PRESSURE_SPAN_V = 4.0
+PRESSURE_FULL_PSI = 100.0
 
 ow = adafruit_onewire.bus.OneWireBus(board.IO15)
 ds_sensors = scan_probes()

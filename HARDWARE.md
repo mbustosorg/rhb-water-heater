@@ -77,14 +77,19 @@ A 0.5-4.5V ratiometric transducer: `+5V`, `SIG`, `GND`.  R4 (10k) and R5
 (20k) scale it by 2/3, to 0.33-3.0V, inside the range the ESP32-S3's ADC
 reads.  C1 (100nF) filters it.
 
-**`read_water_pressure` has to change when this board goes in.**  It reads
-the ADC as the sensor's own voltage, so it needs scaling back up by 1.5:
+Use 1% metal film for R4 and R5: the ratio is only as good as the parts,
+and 5% ones can put it 3% out.
 
-```python
-sensor_voltage = (adc_raw / 65535) * 3.3 * 1.5
-```
+**Set `PRESSURE_DIVIDER` to 1.5 in `code.py` when this board goes in.**
+`read_water_pressure` scales the ADC voltage by it to get the sensor's own
+voltage back.  Left at 1.0, pressure reads about a third low across the
+whole range.
 
-Without the change, pressure will read low across the whole range.
+The sensor is ratiometric, so its output moves with the 5V rail, and the
+ESP32-S3's ADC is good to 1-2%.  For a reading closer than a few PSI,
+calibrate `PRESSURE_ZERO_V` and `PRESSURE_SPAN_V` against a gauge; the
+comment above them in `code.py` says how.  Check `PRESSURE_FULL_PSI`
+matches the sensor's rated range.
 
 ### Bath probe, J7
 
@@ -105,10 +110,10 @@ Parts
 | --- | --- | --- |
 | 1 | U1 | Waveshare ESP32-S3-POE-ETH (or ESP32-S3-ETH plus its PoE module) |
 | 2 | U1 | 1x20 female header, 2.54 mm |
-| 3 | R1-R3 | 10k, 1/4 W |
-| 1 | R4 | 10k, 1/4 W |
-| 1 | R5 | 20k, 1/4 W |
-| 1 | R6 | 4.7k, 1/4 W |
+| 3 | R1-R3 | 10k, 1/4 W, 5% or better |
+| 1 | R4 | 10k, 1/4 W, 1% metal film |
+| 1 | R5 | 20k, 1/4 W, 1% metal film |
+| 1 | R6 | 4.7k, 1/4 W, 5% or better |
 | 1 | C1 | 100nF ceramic, 5 mm pitch |
 | 3 | J3-J5 | Phoenix MKDS 1,5/2-5,08 terminal block |
 | 2 | J6, J7 | Phoenix MKDS 1,5/3-5,08 terminal block |

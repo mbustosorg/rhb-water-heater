@@ -9,7 +9,7 @@ A two layer, 86.5 x 51.5 mm carrier for the circuit in
 | Ref | Part | Footprint |
 | --- | --- | --- |
 | U1 | Waveshare ESP32-S3-ETH with PoE module, on 2 x 20 female headers | `rhb:Waveshare_ESP32-S3-ETH_Socketed`, generated |
-| R1-R6 | 1/4 W, standing | `Resistor_THT:R_Axial_DIN0207_L6.3mm_D2.5mm_P2.54mm_Vertical` |
+| R1-R6 | 1/4 W, standing; R4 and R5 1% metal film | `Resistor_THT:R_Axial_DIN0207_L6.3mm_D2.5mm_P2.54mm_Vertical` |
 | C1 | 100nF | `Capacitor_THT:C_Disc_D5.0mm_W2.5mm_P5.00mm` |
 | J3-J5 | 2 way screw terminal, 5.08 mm | `TerminalBlock_Phoenix:..._MKDS-1,5-2-5.08_1x02_P5.08mm_Horizontal` |
 | J6, J7 | 3 way screw terminal, 5.08 mm | `TerminalBlock_Phoenix:..._MKDS-1,5-3-5.08_1x03_P5.08mm_Horizontal` |

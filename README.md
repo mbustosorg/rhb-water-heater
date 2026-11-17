@@ -109,9 +109,8 @@ It runs from PoE alone, through Waveshare's 802.3af module, on a carrier
 board.  IO48, IO47 and IO3 drive the inputs of SSRs off the board, which
 switch the valve, heater and safety loads.  [HARDWARE.md](HARDWARE.md) has
 the circuit, and [kicad/](kicad/README.md) the board.
-On the carrier the pressure input goes through a 2/3 divider, so
-`read_water_pressure` needs scaling by 1.5 when it goes in; see
-HARDWARE.md.
+On the carrier the pressure input goes through a 2/3 divider, so set
+`PRESSURE_DIVIDER` in `code.py` to 1.5 when it goes in; see HARDWARE.md.
 
 The probe runs at 9 bit resolution.  The reading is used as whole degrees F,
 so 12 bit resolves precision that is thrown away and costs 750ms of
