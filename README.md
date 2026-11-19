@@ -109,7 +109,6 @@ Known rough edges
   CRC errors regularly, so a flaky probe cycles the valve.
 - The OneWire bus has also returned an empty scan at boot.  The software
   recovers, but suspect the pull-up, parasite power or cable length first.
-- `WIFI_SSID` and `WIFI_PASSWORD` in the config are unused leftovers.
 - `read_and_display_temp` keeps the last probe on the bus, so a second one is
   ignored.  `scan_probes` logs how many it found.
 - The receive path overrides microosc's 1 ms socket timeout and 128 byte
