@@ -1,7 +1,7 @@
 Water Heater Carrier Board
 ==========================
 
-A two layer, 86.5 x 51.5 mm carrier for the circuit in
+Two layer, 86.5 x 51.5 mm carrier for the circuit in
 [HARDWARE.md](../HARDWARE.md).
 
 ![Board, top](board.png)
@@ -16,14 +16,9 @@ A two layer, 86.5 x 51.5 mm carrier for the circuit in
 | J2 | JST-XH 4 pin, to the display | `Connector_JST:JST_XH_B4B-XH-A_1x04_P2.50mm_Vertical` |
 | H1-H4 | M3 holes | `MountingHole:MountingHole_3.2mm_M3` |
 
-- **U1** sits component side up, its pin 1 (GPIO20, square pad) at the
-  top right.  Its RJ45 and USB-C end overhangs the right edge by about
-  16 mm, so the Ethernet cable and the PoE module, which rides over the
-  RJ45, are clear of the board.  The footprint is generated from
-  Waveshare's drawing: rows 17.78 mm apart, the same positions as a Pico's.
-- **Terminals** are all along the bottom edge, wire entry facing off the
-  board.  Left to right, with each pin labelled on the silkscreen under the
-  block:
+- **U1** sits component side up, pin 1 (square pad) top right.  Its RJ45 end
+  overhangs the right edge by about 16 mm, clearing the cable and PoE module.
+- **Terminals**, along the bottom edge, pin 1 (square pad) on the right:
 
   | Block | Pins, left to right |
   | --- | --- |
@@ -31,15 +26,13 @@ A two layer, 86.5 x 51.5 mm carrier for the circuit in
   | J6 `PRESSURE` | `GND SIG +5V` |
   | J5 `SAFETY`, J4 `HEATER`, J3 `VALVE` | `GND SIG` |
 
-  The square pad on each block is pin 1, the right-hand pin.
-- **J2** is `+ - D C`, left to right, matching the backpack's pins.
-- **Ground** is poured on both layers.
+- **J2** is `+ - D C`, matching the backpack.
+- Ground is poured on both layers.
 
 Regenerating
 ------------
 
-The schematic and board are generated; edit the scripts, not the KiCad
-files, then run from this directory:
+Edit the scripts, not the KiCad files, then run from this directory:
 
     KICAD=/Applications/KiCad/KiCad.app/Contents
     python3 generate_schematic.py
@@ -48,13 +41,8 @@ files, then run from this directory:
     $KICAD/Frameworks/Python.framework/Versions/Current/bin/python3 route.py
     $KICAD/MacOS/kicad-cli pcb drc --schematic-parity -o drc.rpt rhb_water_heater.kicad_pcb
 
-`check.sh` runs the first four steps and a placement-only DRC, for
-trying out a layout change before routing.
+`check.sh` runs the first four steps and a placement-only DRC, for trying a
+layout before routing.  `route.py` needs Java 17+ and
+`~/tools/freerouting-1.9.jar`.
 
-`generate_pcb.py` also writes `rhb.pretty/`, the module's footprint;
-`fp-lib-table` points KiCad at it.  `route.py` needs Java 17+ and
-`~/tools/freerouting-1.9.jar`.  It autoroutes with freerouting and fills
-the ground pours.
-
-DRC reports no clearance, connection or parity errors.  It does list four
-expected warnings: the mounting holes are not in the schematic.
+DRC has four expected warnings: the mounting holes aren't in the schematic.

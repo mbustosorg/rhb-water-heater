@@ -1,15 +1,9 @@
 Water Heater Hardware
 =====================
 
-The water heater runs entirely from PoE.  A Waveshare ESP32-S3-ETH with
-Waveshare's 802.3af PoE module plugs into a carrier board.  The carrier
-brings out three SSR control signals, conditions the pressure input and the
-DS18B20 bus, and connects the display.  The valve, the heater and the safety
-shutdown are switched by SSRs off the board, from their own supplies.
-
 ![Water heater circuit](circuit.svg)
 
-[kicad/](kicad/README.md) has a two layer board for it.
+[kicad/](kicad/README.md) has the carrier board.
 
 Power
 -----
@@ -24,84 +18,60 @@ Power
                                      +-- pressure transducer, 5V
                                      +-- display, probe, from 3V3
 
-The board needs nothing else plugged in.  Buy the board as the
-**ESP32-S3-POE-ETH**, which has the module fitted, or fit Waveshare's PoE
-module to an ESP32-S3-ETH.  With the loads on SSRs, the board draws a few
-watts at most, well inside 802.3af.
+Buy the **ESP32-S3-POE-ETH**, or fit Waveshare's PoE module to an
+ESP32-S3-ETH.  With the loads on SSRs it draws a few watts.
 
 - **Never plug in USB-C while PoE is connected.**  A third-party report says
-  the PoE module is not isolated from the board, so USB would join the
-  host's ground to it.  Unplug the Ethernet to flash, or flash before the
-  board goes into the carrier.
-- **Check VSYS before fitting the carrier.**  The carrier assumes the PoE
-  module's 5V reaches VSYS (pin 39).  That has not been checked against
-  Waveshare's schematic or measured.  With PoE connected and nothing on the
-  headers, VSYS to GND should read 5V.  If it does not, find the pin that
-  does and move `+5V` to it in `kicad/generate_schematic.py`.  Only the
-  pressure transducer uses it.
+  the PoE module isn't isolated, so USB would join the host's ground to it.
+- **Check VSYS before fitting the carrier.**  With PoE connected and nothing
+  on the headers, VSYS (pin 39) to GND should read 5V.  If not, move `+5V` to
+  the pin that does in `kicad/generate_schematic.py`.
 
 SSR outputs
 -----------
 
-Each output is a terminal pair, `SIG` and `GND`, wired to the SSR's DC
-input `+` and `-`.  `SIG` is the GPIO itself: 3.3V high, open the SSR.
+Each terminal is `SIG` (the GPIO, 3.3V high) and `GND`, to the SSR's DC
+input `+` and `-`.
 
 | Terminal | GPIO | SSR |
 | --- | --- | --- |
 | J3 `VALVE` | IO48 | Solenoid valve |
-| J4 `HEATER` | IO47 | Heater.  Nothing drives IO47 today |
+| J4 `HEATER` | IO47 | Heater, not driven |
 | J5 `SAFETY` | IO3 | Safety shutdown |
 
-R1-R3, 10k from each `SIG` to GND, hold the SSRs off while the ESP32 boots
-and its pins float, and if the module is out of its socket.
+R1-R3 (10k to GND) hold the SSRs off while the ESP32 boots.
 
-- **The SSR has to turn on at 3.3V.**  The common DC input SSRs, rated
-  3-32V in, do.  One rated 4-32V or 5V in may not, or only some of the
-  time.  Check the rating.
-- **Input current.**  A typical SSR input takes 5-15 mA, which the ESP32-S3
-  drives directly.  An SSR that wants more than about 20 mA needs a
-  transistor in front of it.
-- **Keep the SSR wiring short and away from the mains side.**  `SIG` is a
-  bare GPIO.  Nothing on the board protects it from a wire that touches the
-  load's supply.
+- **The SSR must turn on at 3.3V**: use one rated 3-32V in, not 4-32V or 5V.
+- An SSR wanting more than about 20 mA input needs a transistor in front.
+- `SIG` is a bare GPIO: keep the SSR wiring short and away from mains.
 
-IO3 is an ESP32-S3 strapping pin, but it only selects the JTAG source, and
-only once an eFuse is burned.  The pull-down has no effect on boot.
+IO3 is a strapping pin, but only for JTAG after an eFuse is burned, so the
+pull-down doesn't affect boot.
 
 Sensors
 -------
 
 ### Pressure, J6
 
-A 0.5-4.5V ratiometric transducer: `+5V`, `SIG`, `GND`.  R4 (10k) and R5
-(20k) scale it by 2/3, to 0.33-3.0V, inside the range the ESP32-S3's ADC
-reads.  C1 (100nF) filters it.
+0.5-4.5V ratiometric transducer: `+5V`, `SIG`, `GND`.  R4 (10k) and R5 (20k)
+scale it by 2/3 for the ADC; C1 (100nF) filters it.  Use 1% resistors.
 
-Use 1% metal film for R4 and R5: the ratio is only as good as the parts,
-and 5% ones can put it 3% out.
+**Set `PRESSURE_DIVIDER` to 1.5 in `code.py` when this board goes in**, or
+pressure reads a third low.
 
-**Set `PRESSURE_DIVIDER` to 1.5 in `code.py` when this board goes in.**
-`read_water_pressure` scales the ADC voltage by it to get the sensor's own
-voltage back.  Left at 1.0, pressure reads about a third low across the
-whole range.
-
-The sensor is ratiometric, so its output moves with the 5V rail, and the
-ESP32-S3's ADC is good to 1-2%.  For a reading closer than a few PSI,
-calibrate `PRESSURE_ZERO_V` and `PRESSURE_SPAN_V` against a gauge; the
-comment above them in `code.py` says how.  Check `PRESSURE_FULL_PSI`
-matches the sensor's rated range.
+For better than a few PSI, calibrate `PRESSURE_ZERO_V` and `PRESSURE_SPAN_V`
+against a gauge (see the comment in `code.py`), and check
+`PRESSURE_FULL_PSI` matches the sensor.
 
 ### Bath probe, J7
 
-The DS18B20: `3V3`, `DQ`, `GND`, powered rather than parasitic.  R6 (4.7k)
-pulls DQ up to 3V3.  If the CRC errors in the README persist on a long
-cable, try 2.2k for R6 before anything else.
+DS18B20, `3V3`, `DQ`, `GND`, powered.  R6 (4.7k) pulls DQ up.  If CRC errors
+persist on a long cable, try 2.2k.
 
 ### Display, J2
 
-The HT16K33 backpack, as on the poof controller.  A JST-XH 4 pin, `+ - D C`
-left to right: 3V3, GND, SDA (IO39), SCL (IO38).  Run it from 3V3, so the
-backpack's own pull-ups on `D` and `C` go to 3V3.
+HT16K33 backpack, as on the poof controller: JST-XH `+ - D C` = 3V3, GND,
+SDA (IO39), SCL (IO38).  Use 3V3 so the backpack's pull-ups go to 3V3.
 
 Parts
 -----

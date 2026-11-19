@@ -1,23 +1,17 @@
 Red Hot Beverly Water Heater
 ============================
 
-Controls the water bath's solenoid valve, and reports what the rest of the
-rig knows about the bath.  Runs on a Waveshare ESP32-S3-ETH (CircuitPython)
-at 192.168.1.9, wired -- the W5500 is the only interface, there is no WiFi.
+Controls the water bath's solenoid valve from a DS18B20 in the bath, reads
+the loop pressure, and drives a four digit HT16K33 display.  CircuitPython on
+a Waveshare ESP32-S3-ETH at 192.168.1.9, wired; there is no WiFi.
 
-The board switches the valve on IO48 against a DS18B20 in the bath, reads
-the loop pressure, and drives a four digit HT16K33 display.
-
-There is still a heater in the system, but this board does not control it.
-`heater_pin` (IO47) is initialised low and nothing drives it high; the relay
-is left in the design so it can come back.
+The heater relay (`heater_pin`, IO47) is initialised low and never driven;
+the heater is controlled elsewhere.
 
 OSC messages
 ------------
 
-Every address has exactly one producer.  This device owns the water bath
-state; nothing else on the network emits any of it.  The accumulator
-pressure belongs to rhb-sensor-monitor and is consumed here, never
+Every address has one producer.  `/pressure` is consumed here, never
 re-broadcast.
 
 | Address | Direction | Payload |
@@ -28,13 +22,12 @@ re-broadcast.
 | `/water_pressure` | out | Bath loop pressure, PSI |
 | `/pressure` | in, from rhb-sensor-monitor | Accumulator pressure, PSI, rounded |
 
-The five outbound messages go every five seconds, in that order, to every
-listener in `MOBILE_CLIENTS`.  `/water_pressure` is last, and rhb-sensor-
-monitor writes its `water_*.csv` row when it arrives -- so keep it last.
+The outbound messages go every 5 s, in that order, to `MOBILE_CLIENTS`.  Keep
+`/water_pressure` last: rhb-sensor-monitor writes its `water_*.csv` row when
+it arrives.
 
-Addresses are matched exactly.  microosc dispatches on `startswith`, so
-`/pressure` alone would also catch `/pressure_fine`; `propane_pressure_
-handler` re-checks the address itself.
+microosc dispatches on `startswith`, so `propane_pressure_handler` re-checks
+the address to ignore `/pressure_fine`.
 
 Display
 -------
@@ -42,33 +35,27 @@ Display
 | Digits | Shows |
 | --- | --- |
 | 0-1 | Accumulator pressure, from `/pressure` |
-| 2-3 | Bath temperature |
+| 2-3 | Bath temperature, blinking while the valve is open |
 
-`--` on a pair means no data: no `/pressure` has arrived yet, or the probe
-gave no usable reading.  The temperature digits blink while the valve is
-open.
+`--` means no data.
 
 Configuration
 -------------
 
-`config_rhb.json`, which is gitignored -- it holds the rig's credentials.
+`config_rhb.json`, gitignored.
 
 | Key | Meaning |
 | --- | --- |
 | `IP` | This device's static address |
-| `MOBILE_CLIENTS` | Comma separated listeners, `host` or `host:port` |
+| `MOBILE_CLIENTS` | Comma separated listeners, `host` or `host:port` (body display is `192.168.1.3:10002`) |
 | `UPPER_TEMP` | Valve shuts at or above, deg F |
 | `LOWER_TEMP` | Valve opens at or below, deg F |
 
-The rig is statically addressed and has no DHCP server on the wired side,
-so the interface is configured from `IP` directly.  Never call `set_dhcp()`
-here: it blocks until it gets a lease that never comes, and with the event
-loop behind it that stops the valve as well as the network.
+Never call `set_dhcp()`: the rig has no DHCP, and it blocks the event loop,
+valve included, waiting for a lease.
 
-Listeners on a port other than 8888 are written `host:port` -- the body
-display is `192.168.1.3:10002`.  Several entries are phones that are absent
-most of the time; a listener that fails is skipped for a growing number of
-cycles rather than being waited on every time.
+A listener that fails, usually an absent phone, is skipped for a growing
+number of cycles.
 
 Valve control
 -------------
@@ -77,81 +64,53 @@ Valve control
 | --- | --- |
 | Temperature at or below `LOWER_TEMP` | Valve opens |
 | Temperature at or above `UPPER_TEMP` | Valve shuts |
-| Between the two | Whatever it was already doing |
+| Between the two | No change |
 | No usable temperature reading | Valve shuts |
 
-The band is hysteretic: once open it stays open until `UPPER_TEMP`, and once
-shut it stays shut until `LOWER_TEMP`.  The heater this board does not
-control is what moves the bath across the band.
+Readings outside 33-212F are discarded; a missing probe used to read as 0F.
 
-A missing or unreadable probe is never treated as a temperature.  It used to
-come back as 0F, below any setpoint.  Readings outside 33-212F are discarded
-for the same reason.
-
-There was a ten minute recycle that latched a safety shutdown when the bath
-had not warmed.  It policed a heater this board no longer owns, and it
-cannot tell a heater fault from a valve doing its job, so it went with the
-heater.
+The old ten minute recycle safety shutdown policed the heater, which this
+board no longer owns, so it was removed.
 
 Hardware
 --------
 
 | Pin | Use |
 | --- | --- |
-| IO47 | Heater relay, not driven -- the heater is controlled elsewhere |
-| IO48 | Solenoid valve |
-| IO3 | Safety shutdown |
+| IO47 | Heater SSR, not driven |
+| IO48 | Valve SSR |
+| IO3 | Safety shutdown SSR |
 | IO1 | Loop pressure, analogue |
 | IO15 | OneWire, DS18B20 bath probe |
 | IO38 / IO39 | I2C SCL / SDA, HT16K33 display |
 
-It runs from PoE alone, through Waveshare's 802.3af module, on a carrier
-board.  IO48, IO47 and IO3 drive the inputs of SSRs off the board, which
-switch the valve, heater and safety loads.  [HARDWARE.md](HARDWARE.md) has
-the circuit, and [kicad/](kicad/README.md) the board.
-On the carrier the pressure input goes through a 2/3 divider, so set
-`PRESSURE_DIVIDER` in `code.py` to 1.5 when it goes in; see HARDWARE.md.
+Powered by PoE alone, on a carrier board; the SSRs are off the board.  See
+[HARDWARE.md](HARDWARE.md) and [kicad/](kicad/README.md).  **Set
+`PRESSURE_DIVIDER` in `code.py` to 1.5 when the carrier goes in.**
 
-The probe runs at 9 bit resolution.  The reading is used as whole degrees F,
-so 12 bit resolves precision that is thrown away and costs 750ms of
-conversion per read against 94ms -- with the event loop blocked behind it.
+The probe runs at 9 bit: readings are used as whole degrees, and 12 bit
+blocks the event loop 750 ms per read instead of 94 ms.
 
 Deployment
 ----------
 
-Copy `code.py`, `rhb_utils.py` and `config_rhb.json` to the `CIRCUITPY`
-volume.  The board soft reboots on write and the relay pins initialise off,
-so it fails safe.
+Copy `code.py`, `rhb_utils.py` and `config_rhb.json` to `CIRCUITPY`.  The
+board soft reboots on write and the relay pins initialise off.
 
-The console is on `/dev/cu.usbmodem<UID>`.  Use `cu.*`, not `tty.*`, so DTR
-is not asserted.  A healthy board prints `Temperature: NN` about every five
-seconds; much longer means something is blocking the event loop.
+Console: `/dev/cu.usbmodem<UID>` (`cu.*`, not `tty.*`, so DTR is not
+asserted).  A healthy board prints `Temperature: NN` about every 5 s.
 
 Known rough edges
 -----------------
 
-`/water_heater` reports the valve.  The address kept its name so that
-rhb-sensor-monitor's `water_*.csv` and the body display did not have to
-change; `state["heater_status"]` is the valve's state for the same reason.
-Nothing else publishes that address today, but whatever controls the real
-heater would be the natural owner of it if it ever did.
-
-The valve shuts on any unusable probe reading, and the OneWire bus throws
-CRC errors regularly -- so a flaky probe cycles the valve.  That rule was
-written to make a heater fail safe; it is less obviously right for a valve.
-
-The OneWire bus throws CRC errors regularly, and has returned an empty scan
-at boot.  The software recovers from both, but the cause is physical --
-suspect the pull-up value, parasite power, or cable length before suspecting
-the code.
-
-`WIFI_SSID` and `WIFI_PASSWORD` in the config are left over from the Pico W
-this replaced.  Nothing reads them.
-
-`read_and_display_temp` keeps the last probe it iterates, so a second sensor
-on the bus would be silently ignored.  `scan_probes` logs how many it found.
-
-The receive path overrides two microosc defaults, and needs to.  Its 1ms
-socket timeout is shorter than an SPI read of the W5500, and its 128 byte
-buffer is smaller than the datagrams that arrive; either one alone stops
-`/pressure` from ever being dispatched.  See `poll_osc`.
+- `/water_heater` and `state["heater_status"]` report the valve, kept so
+  rhb-sensor-monitor and the body display didn't have to change.
+- The valve shuts on any unusable probe reading, and the OneWire bus throws
+  CRC errors regularly, so a flaky probe cycles the valve.
+- The OneWire bus has also returned an empty scan at boot.  The software
+  recovers, but suspect the pull-up, parasite power or cable length first.
+- `WIFI_SSID` and `WIFI_PASSWORD` in the config are unused leftovers.
+- `read_and_display_temp` keeps the last probe on the bus, so a second one is
+  ignored.  `scan_probes` logs how many it found.
+- The receive path overrides microosc's 1 ms socket timeout and 128 byte
+  buffer; either default alone stops `/pressure` arriving.  See `poll_osc`.
