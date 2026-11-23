@@ -40,6 +40,7 @@ try:
 except Exception as _e:
     print("warning: wx init:", _e)
 
+YEAR = 2026  # silkscreen copyright
 MM = pcbnew.FromMM
 def V(x, y): return pcbnew.VECTOR2I(MM(x), MM(y))
 
@@ -169,6 +170,7 @@ silk("DISPLAY", 79.75, 100.3, 0.9)
 silk("RHB WATER HEATER", 81.5, 113.5, 1.2)
 silk("PoE only.", 81.5, 116.0, 0.8)
 silk("No USB with PoE.", 81.5, 117.6, 0.8)
+silk(f"m@bustos.org (c) {YEAR}", (BX0 + BX1) / 2, BY0 + 3.0, 0.8)
 
 # ── terminals, along the bottom ──────────────────────────────────────────────
 # Rotated 180 so the wire entry faces off the bottom edge; pin 1 is then on

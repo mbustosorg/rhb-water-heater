@@ -2,7 +2,7 @@
 	(version "E")
 	(design
 		(source "/Users/mauricio/Documents/development/projects/rhb-water-heater/kicad/rhb_water_heater.kicad_sch")
-		(date "2026-11-22T21:52:48")
+		(date "2026-11-23T05:28:19")
 		(tool "Eeschema 10.0.3")
 		(sheet
 			(number "1")
@@ -85,7 +85,7 @@
 				(names "/")
 				(tstamps "/")
 			)
-			(tstamps "317e21b7-6f36-43dc-9fe6-42081abd1c28")
+			(tstamps "90abee75-2094-434f-983d-d6b200e2f3c4")
 			(units
 				(unit
 					(name "A")
@@ -131,7 +131,7 @@
 				(names "/")
 				(tstamps "/")
 			)
-			(tstamps "ad6d0e1d-6fc6-45f0-bd06-607eb54d7250")
+			(tstamps "3d19c3d5-c00f-48a0-8bb6-a7f927de348a")
 			(units
 				(unit
 					(name "A")
@@ -183,7 +183,7 @@
 				(names "/")
 				(tstamps "/")
 			)
-			(tstamps "a83a9631-1510-4bbd-83b3-f82f5b7428ec")
+			(tstamps "49610b12-9b5a-4315-af4b-c6e2ea056547")
 			(units
 				(unit
 					(name "A")
@@ -229,7 +229,7 @@
 				(names "/")
 				(tstamps "/")
 			)
-			(tstamps "00ad0a8a-c91b-4bf7-8eb2-42423006cf92")
+			(tstamps "adc9e120-a152-4722-9be2-ef33f0d27ad5")
 			(units
 				(unit
 					(name "A")
@@ -275,7 +275,7 @@
 				(names "/")
 				(tstamps "/")
 			)
-			(tstamps "bd8313cb-2d8e-4a1b-8b82-91830a81b101")
+			(tstamps "f49ec35a-873a-4296-9a54-f795aadde0d5")
 			(units
 				(unit
 					(name "A")
@@ -321,7 +321,7 @@
 				(names "/")
 				(tstamps "/")
 			)
-			(tstamps "566d5a20-52ab-4a43-b6c1-3c619172bc19")
+			(tstamps "c9382b88-0a8d-4064-80ac-727f81e12ba3")
 			(units
 				(unit
 					(name "A")
@@ -370,7 +370,7 @@
 				(names "/")
 				(tstamps "/")
 			)
-			(tstamps "a6422e0d-8d98-4f86-a8f6-2e88b02e503d")
+			(tstamps "5387385e-17bd-441c-8b7a-6c5b35fff192")
 			(units
 				(unit
 					(name "A")
@@ -419,7 +419,7 @@
 				(names "/")
 				(tstamps "/")
 			)
-			(tstamps "8e0e43e3-6d04-4c60-b957-be58cd886843")
+			(tstamps "393c65b6-b37c-4f9d-97b2-374a8ae1f1d1")
 			(units
 				(unit
 					(name "A")
@@ -465,7 +465,7 @@
 				(names "/")
 				(tstamps "/")
 			)
-			(tstamps "99355654-0698-404d-9ead-e42cb741b976")
+			(tstamps "4a85e255-f291-4900-9c8e-21eed66f8ce2")
 			(units
 				(unit
 					(name "A")
@@ -511,7 +511,7 @@
 				(names "/")
 				(tstamps "/")
 			)
-			(tstamps "c4f4a111-d9e8-4d50-a541-89d50ffa018a")
+			(tstamps "0f2f9813-eeb3-4c91-85f2-dbbc46d3e7fe")
 			(units
 				(unit
 					(name "A")
@@ -557,7 +557,7 @@
 				(names "/")
 				(tstamps "/")
 			)
-			(tstamps "33e342f1-f482-4555-a7ff-a88fd0d27ca4")
+			(tstamps "ad67b9bf-6912-435b-867d-576c2114e7fd")
 			(units
 				(unit
 					(name "A")
@@ -603,7 +603,7 @@
 				(names "/")
 				(tstamps "/")
 			)
-			(tstamps "72144bcc-6b43-4178-ada9-d9abc754b459")
+			(tstamps "8f2911cb-0b12-462c-b0cf-5f8ae190beee")
 			(units
 				(unit
 					(name "A")
@@ -649,7 +649,7 @@
 				(names "/")
 				(tstamps "/")
 			)
-			(tstamps "fb6066d0-3c2b-4077-867b-22224e844e52")
+			(tstamps "64946ec7-83d6-4f54-a911-def686eb209b")
 			(units
 				(unit
 					(name "A")
@@ -695,7 +695,7 @@
 				(names "/")
 				(tstamps "/")
 			)
-			(tstamps "3525e31d-19bb-46bb-93e3-2d3a3d1f5a2a")
+			(tstamps "96c60886-1e13-45cb-bea2-e143acf4386c")
 			(units
 				(unit
 					(name "A")
