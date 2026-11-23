@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """
-Autoroute the board with freerouting, fill the zones and save it.  Run with
+Autoroute the board with freerouting, fill the zones and save it, trying
+again if anything is left unconnected.  Run with
 KiCad's Python, after generate_pcb.py; build.sh does.  Needs Java 17+ and
 freerouting at $FREEROUTING, default ~/tools/freerouting-1.9.jar.
 
@@ -26,16 +27,23 @@ try:
 except Exception:
     pass
 
-board = pcbnew.LoadBoard(PCB)
-pcbnew.ExportSpecctraDSN(board, DSN)
-subprocess.run(["java", "-jar", JAR, "-de", DSN, "-do", SES, "-mp", "30"],
-               check=True, capture_output=True)
+TRIES = 3  # freerouting's result varies between runs
 
-board = pcbnew.LoadBoard(PCB)
-pcbnew.ImportSpecctraSES(board, SES)
-pcbnew.ZONE_FILLER(board).Fill(board.Zones())
-board.BuildConnectivity()
-unconnected = board.GetConnectivity().GetUnconnectedCount(False)
+for attempt in range(1, TRIES + 1):
+    board = pcbnew.LoadBoard(PCB)
+    pcbnew.ExportSpecctraDSN(board, DSN)
+    subprocess.run(["java", "-jar", JAR, "-de", DSN, "-do", SES, "-mp", "30"],
+                   check=True, capture_output=True)
+
+    board = pcbnew.LoadBoard(PCB)
+    pcbnew.ImportSpecctraSES(board, SES)
+    pcbnew.ZONE_FILLER(board).Fill(board.Zones())
+    board.BuildConnectivity()
+    unconnected = board.GetConnectivity().GetUnconnectedCount(False)
+    if unconnected == 0:
+        break
+    print(f"try {attempt}: {unconnected} unconnected")
+
 pcbnew.SaveBoard(PCB, board)
 print(f"routed {os.path.basename(PCB)}, unconnected: {unconnected}")
 sys.exit(1 if unconnected else 0)
