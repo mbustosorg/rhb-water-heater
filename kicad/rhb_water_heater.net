@@ -2,7 +2,7 @@
 	(version "E")
 	(design
 		(source "/Users/mauricio/Documents/development/projects/rhb-water-heater/kicad/rhb_water_heater.kicad_sch")
-		(date "2026-11-17T11:19:11")
+		(date "2026-11-22T21:52:48")
 		(tool "Eeschema 10.0.3")
 		(sheet
 			(number "1")
@@ -69,7 +69,7 @@
 				)
 			)
 			(libsource
-				(lib "rhb")
+				(lib "rhb_water_heater")
 				(part "C")
 				(description "")
 			)
@@ -85,7 +85,7 @@
 				(names "/")
 				(tstamps "/")
 			)
-			(tstamps "4967f8ee-6438-4c52-b41d-80479056ea2b")
+			(tstamps "317e21b7-6f36-43dc-9fe6-42081abd1c28")
 			(units
 				(unit
 					(name "A")
@@ -115,7 +115,7 @@
 				)
 			)
 			(libsource
-				(lib "rhb")
+				(lib "rhb_water_heater")
 				(part "Display4")
 				(description "")
 			)
@@ -131,7 +131,7 @@
 				(names "/")
 				(tstamps "/")
 			)
-			(tstamps "fe98995c-3362-4387-bcaa-0f1d1741d061")
+			(tstamps "ad6d0e1d-6fc6-45f0-bd06-607eb54d7250")
 			(units
 				(unit
 					(name "A")
@@ -167,7 +167,7 @@
 				)
 			)
 			(libsource
-				(lib "rhb")
+				(lib "rhb_water_heater")
 				(part "Term2")
 				(description "")
 			)
@@ -183,7 +183,7 @@
 				(names "/")
 				(tstamps "/")
 			)
-			(tstamps "8dd2c4ab-8afb-4eca-8e52-557123ab457d")
+			(tstamps "a83a9631-1510-4bbd-83b3-f82f5b7428ec")
 			(units
 				(unit
 					(name "A")
@@ -213,7 +213,7 @@
 				)
 			)
 			(libsource
-				(lib "rhb")
+				(lib "rhb_water_heater")
 				(part "Term2")
 				(description "")
 			)
@@ -229,7 +229,7 @@
 				(names "/")
 				(tstamps "/")
 			)
-			(tstamps "705753f2-7947-48cd-a082-d5e05d37395b")
+			(tstamps "00ad0a8a-c91b-4bf7-8eb2-42423006cf92")
 			(units
 				(unit
 					(name "A")
@@ -259,7 +259,7 @@
 				)
 			)
 			(libsource
-				(lib "rhb")
+				(lib "rhb_water_heater")
 				(part "Term2")
 				(description "")
 			)
@@ -275,7 +275,7 @@
 				(names "/")
 				(tstamps "/")
 			)
-			(tstamps "3cfd025b-45db-4e70-bc3a-c9804dd7b692")
+			(tstamps "bd8313cb-2d8e-4a1b-8b82-91830a81b101")
 			(units
 				(unit
 					(name "A")
@@ -305,7 +305,7 @@
 				)
 			)
 			(libsource
-				(lib "rhb")
+				(lib "rhb_water_heater")
 				(part "Term3")
 				(description "")
 			)
@@ -321,7 +321,7 @@
 				(names "/")
 				(tstamps "/")
 			)
-			(tstamps "37a96830-4e0e-40d3-b82f-055d9847b1b9")
+			(tstamps "566d5a20-52ab-4a43-b6c1-3c619172bc19")
 			(units
 				(unit
 					(name "A")
@@ -354,7 +354,7 @@
 				)
 			)
 			(libsource
-				(lib "rhb")
+				(lib "rhb_water_heater")
 				(part "Term3")
 				(description "")
 			)
@@ -370,7 +370,7 @@
 				(names "/")
 				(tstamps "/")
 			)
-			(tstamps "d61798d5-a5a0-4da5-a44d-81e7be157131")
+			(tstamps "a6422e0d-8d98-4f86-a8f6-2e88b02e503d")
 			(units
 				(unit
 					(name "A")
@@ -403,7 +403,7 @@
 				)
 			)
 			(libsource
-				(lib "rhb")
+				(lib "rhb_water_heater")
 				(part "R")
 				(description "")
 			)
@@ -419,7 +419,7 @@
 				(names "/")
 				(tstamps "/")
 			)
-			(tstamps "9ebf9899-01ec-4d0f-a8ad-bed2143b8d2c")
+			(tstamps "8e0e43e3-6d04-4c60-b957-be58cd886843")
 			(units
 				(unit
 					(name "A")
@@ -449,7 +449,7 @@
 				)
 			)
 			(libsource
-				(lib "rhb")
+				(lib "rhb_water_heater")
 				(part "R")
 				(description "")
 			)
@@ -465,7 +465,7 @@
 				(names "/")
 				(tstamps "/")
 			)
-			(tstamps "32444cd4-628f-4434-9a21-4b3fdb87b048")
+			(tstamps "99355654-0698-404d-9ead-e42cb741b976")
 			(units
 				(unit
 					(name "A")
@@ -495,7 +495,7 @@
 				)
 			)
 			(libsource
-				(lib "rhb")
+				(lib "rhb_water_heater")
 				(part "R")
 				(description "")
 			)
@@ -511,7 +511,7 @@
 				(names "/")
 				(tstamps "/")
 			)
-			(tstamps "a47afa9d-5fdd-45de-a8fa-24141b8c95ee")
+			(tstamps "c4f4a111-d9e8-4d50-a541-89d50ffa018a")
 			(units
 				(unit
 					(name "A")
@@ -541,7 +541,7 @@
 				)
 			)
 			(libsource
-				(lib "rhb")
+				(lib "rhb_water_heater")
 				(part "R")
 				(description "")
 			)
@@ -557,7 +557,7 @@
 				(names "/")
 				(tstamps "/")
 			)
-			(tstamps "027d799b-bb2f-48a8-9f0c-93d267a77021")
+			(tstamps "33e342f1-f482-4555-a7ff-a88fd0d27ca4")
 			(units
 				(unit
 					(name "A")
@@ -587,7 +587,7 @@
 				)
 			)
 			(libsource
-				(lib "rhb")
+				(lib "rhb_water_heater")
 				(part "R")
 				(description "")
 			)
@@ -603,7 +603,7 @@
 				(names "/")
 				(tstamps "/")
 			)
-			(tstamps "0f9bd28c-1479-4378-85f0-d8c9eb5c5517")
+			(tstamps "72144bcc-6b43-4178-ada9-d9abc754b459")
 			(units
 				(unit
 					(name "A")
@@ -633,7 +633,7 @@
 				)
 			)
 			(libsource
-				(lib "rhb")
+				(lib "rhb_water_heater")
 				(part "R")
 				(description "")
 			)
@@ -649,7 +649,7 @@
 				(names "/")
 				(tstamps "/")
 			)
-			(tstamps "43830e3a-a05a-47c9-959e-d711c8859fbc")
+			(tstamps "fb6066d0-3c2b-4077-867b-22224e844e52")
 			(units
 				(unit
 					(name "A")
@@ -667,10 +667,10 @@
 		(comp
 			(ref "U1")
 			(value "Waveshare ESP32-S3-ETH + PoE module")
-			(footprint "rhb:Waveshare_ESP32-S3-ETH_Socketed")
+			(footprint "rhb_water_heater:Waveshare_ESP32-S3-ETH_Socketed")
 			(fields
 				(field
-					(name "Footprint") "rhb:Waveshare_ESP32-S3-ETH_Socketed")
+					(name "Footprint") "rhb_water_heater:Waveshare_ESP32-S3-ETH_Socketed")
 				(field
 					(name "Datasheet")
 				)
@@ -679,7 +679,7 @@
 				)
 			)
 			(libsource
-				(lib "rhb")
+				(lib "rhb_water_heater")
 				(part "ESP32-S3-ETH")
 				(description "")
 			)
@@ -695,7 +695,7 @@
 				(names "/")
 				(tstamps "/")
 			)
-			(tstamps "232ab071-15ed-4fd5-97e7-1ce8539ce480")
+			(tstamps "3525e31d-19bb-46bb-93e3-2d3a3d1f5a2a")
 			(units
 				(unit
 					(name "A")
@@ -829,7 +829,7 @@
 	(variants)
 	(libparts
 		(libpart
-			(lib "rhb")
+			(lib "rhb_water_heater")
 			(part "C")
 			(fields
 				(field
@@ -861,7 +861,7 @@
 			)
 		)
 		(libpart
-			(lib "rhb")
+			(lib "rhb_water_heater")
 			(part "Display4")
 			(fields
 				(field
@@ -902,7 +902,7 @@
 			)
 		)
 		(libpart
-			(lib "rhb")
+			(lib "rhb_water_heater")
 			(part "ESP32-S3-ETH")
 			(fields
 				(field
@@ -1123,7 +1123,7 @@
 			)
 		)
 		(libpart
-			(lib "rhb")
+			(lib "rhb_water_heater")
 			(part "R")
 			(fields
 				(field
@@ -1155,7 +1155,7 @@
 			)
 		)
 		(libpart
-			(lib "rhb")
+			(lib "rhb_water_heater")
 			(part "Term2")
 			(fields
 				(field
@@ -1187,7 +1187,7 @@
 			)
 		)
 		(libpart
-			(lib "rhb")
+			(lib "rhb_water_heater")
 			(part "Term3")
 			(fields
 				(field

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Generate the KiCad schematic (.kicad_sch) and project (.kicad_pro) for the
-water heater carrier board.  HARDWARE.md and circuit.svg describe the circuit.
+water heater carrier board.  ../HARDWARE.md and circuit.svg describe the circuit.
 
   U1  Waveshare ESP32-S3-ETH, socketed, with Waveshare's 802.3af PoE module
       fitted.  PoE is the only supply: the module's 5V comes out on VSYS.
@@ -15,8 +15,7 @@ water heater carrier board.  HARDWARE.md and circuit.svg describe the circuit.
   R6  4.7k DS18B20 pull-up to 3V3, on IO15
   J2  JST-XH 4 pin to the HT16K33 backpack: +, -, D, C  (IO39 SDA, IO38 SCL)
 
-Connectivity is label-based; re-run to regenerate, then export the netlist:
-  kicad-cli sch export netlist -o rhb_water_heater.net rhb_water_heater.kicad_sch
+Connectivity is label-based.  build.sh runs this and exports the netlist.
 """
 import json
 import os
@@ -188,7 +187,7 @@ def io(n, name): return pin(n, name, "bidirectional")
 
 # Waveshare's numbering: 1-20 down one side from the USB end, 21-40 back up
 # the other.  The same positions as a Pico's pins.
-make_block("rhb:ESP32-S3-ETH",
+make_block("rhb_water_heater:ESP32-S3-ETH",
     left=[
         io(1, "GPIO20"), io(2, "GPIO19"), pin(3, "GND"),   io(4, "GPIO48"),
         io(5, "GPIO47"), io(6, "GPIO46"), io(7, "GPIO45"), pin(8, "GND"),
@@ -210,25 +209,25 @@ make_block("rhb:ESP32-S3-ETH",
     ],
     hw=10.16, value="Waveshare ESP32-S3-ETH + PoE module")
 
-make_block("rhb:Term2",
+make_block("rhb_water_heater:Term2",
     left=[], right=[pin(1, "SSR+"), pin(2, "SSR-")],
     hw=5.08, value="", ref="J")
 
-make_block("rhb:Term3",
+make_block("rhb_water_heater:Term3",
     left=[], right=[pin(1, "1"), pin(2, "2"), pin(3, "3")],
     hw=5.08, value="", ref="J")
 
-make_block("rhb:Display4",
+make_block("rhb_water_heater:Display4",
     left=[pin(1, "+"), pin(2, "-"), pin(3, "D"), pin(4, "C")],
     right=[], hw=5.08, value="HT16K33 display", ref="J")
 
-make_passive("rhb:R",  "R", "R")
-make_passive("rhb:C",  "C", "C")
+make_passive("rhb_water_heater:R",  "R", "R")
+make_passive("rhb_water_heater:C",  "C", "C")
 
 # --------------------------------------------------------------------------
 # footprints
 # --------------------------------------------------------------------------
-FP_MODULE = "rhb:Waveshare_ESP32-S3-ETH_Socketed"
+FP_MODULE = "rhb_water_heater:Waveshare_ESP32-S3-ETH_Socketed"
 FP_R      = "Resistor_THT:R_Axial_DIN0207_L6.3mm_D2.5mm_P2.54mm_Vertical"
 FP_C      = "Capacitor_THT:C_Disc_D5.0mm_W2.5mm_P5.00mm"
 FP_T2     = "TerminalBlock_Phoenix:TerminalBlock_Phoenix_MKDS-1,5-2-5.08_1x02_P5.08mm_Horizontal"
@@ -243,7 +242,7 @@ text("Powered only by PoE: Waveshare 802.3af module on the ESP32-S3-ETH, 5V out 
 text("The valve, heater and safety loads are switched by SSRs off board; this board drives their inputs", 20, 25, size=1.5)
 
 text("=== ESP32-S3-ETH ===", 20, 40)
-place("rhb:ESP32-S3-ETH", "U1", "Waveshare ESP32-S3-ETH + PoE module", FP_MODULE,
+place("rhb_water_heater:ESP32-S3-ETH", "U1", "Waveshare ESP32-S3-ETH + PoE module", FP_MODULE,
       55, 90,
       {
           "4":  "VALVE",       # IO48
@@ -267,24 +266,24 @@ CHANNELS = [  # gpio net, pull-down, terminal, terminal value
 ]
 for i, (name, rpd, j, jval) in enumerate(CHANNELS):
     x0, y0 = 120, 65 + i * 30
-    place("rhb:R", rpd, "10k", FP_R, x0, y0 + 5, {"1": name, "2": "GND"})
-    place("rhb:Term2", j, jval, FP_T2, x0 + 30, y0, {"1": name, "2": "GND"})
+    place("rhb_water_heater:R", rpd, "10k", FP_R, x0, y0 + 5, {"1": name, "2": "GND"})
+    place("rhb_water_heater:Term2", j, jval, FP_T2, x0 + 30, y0, {"1": name, "2": "GND"})
 
 text("=== SENSORS ===", 20, 160)
-place("rhb:Term3", "J6", "Pressure: +5V, signal, GND", FP_T3, 25, 185,
+place("rhb_water_heater:Term3", "J6", "Pressure: +5V, signal, GND", FP_T3, 25, 185,
       {"1": "+5V", "2": "PRESS_IN", "3": "GND"})
-place("rhb:R", "R4", "10k", FP_R, 50, 180, {"1": "PRESS_IN", "2": "PRESS_ADC"})
-place("rhb:R", "R5", "20k", FP_R, 60, 190, {"1": "PRESS_ADC", "2": "GND"})
-place("rhb:C", "C1", "100nF", FP_C, 70, 190, {"1": "PRESS_ADC", "2": "GND"})
+place("rhb_water_heater:R", "R4", "10k", FP_R, 50, 180, {"1": "PRESS_IN", "2": "PRESS_ADC"})
+place("rhb_water_heater:R", "R5", "20k", FP_R, 60, 190, {"1": "PRESS_ADC", "2": "GND"})
+place("rhb_water_heater:C", "C1", "100nF", FP_C, 70, 190, {"1": "PRESS_ADC", "2": "GND"})
 text("0.5-4.5V in -> 0.33-3.0V at IO1 (x 2/3)", 20, 200, size=1.3)
 
-place("rhb:Term3", "J7", "DS18B20: 3V3, DQ, GND", FP_T3, 25, 220,
+place("rhb_water_heater:Term3", "J7", "DS18B20: 3V3, DQ, GND", FP_T3, 25, 220,
       {"1": "+3V3", "2": "DQ", "3": "GND"})
-place("rhb:R", "R6", "4.7k", FP_R, 50, 220, {"1": "+3V3", "2": "DQ"})
+place("rhb_water_heater:R", "R6", "4.7k", FP_R, 50, 220, {"1": "+3V3", "2": "DQ"})
 
 text("=== DISPLAY ===", 110, 170)
 text("HT16K33 backpack at 0x70, run from 3V3", 110, 174, size=1.3)
-place("rhb:Display4", "J2", "HT16K33 display", FP_JST4, 130, 190,
+place("rhb_water_heater:Display4", "J2", "HT16K33 display", FP_JST4, 130, 190,
       {"1": "+3V3", "2": "GND", "3": "SDA", "4": "SCL"})
 
 # --------------------------------------------------------------------------

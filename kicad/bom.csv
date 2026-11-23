@@ -1,0 +1,10 @@
+Ref,Qty,Value,Description,Manufacturer,MPN,Notes
+U1,1,ESP32-S3-POE-ETH,"ESP32-S3 module with W5500 Ethernet and PoE, Pico-style 2x20 header",Waveshare,ESP32-S3-POE-ETH,Or an ESP32-S3-ETH with Waveshare's PoE module
+,2,1x20 female,"Pin socket 1x20, 2.54 mm, through-hole (U1 sockets)",,,
+R1-R4,4,10k,"Resistor, 1/4 W, axial, standing",,,R4 1% metal film
+R5,1,20k,"Resistor, 1/4 W, axial, standing, 1% metal film",,,
+R6,1,4.7k,"Resistor, 1/4 W, axial, standing",,,DS18B20 pull-up
+C1,1,100nF,"Ceramic disc, 5 mm pitch",,,
+J3-J5,3,Screw terminal 2 way,"Terminal block, 5.08 mm",Phoenix Contact,1715721,"Valve, heater, safety SSRs"
+J6-J7,2,Screw terminal 3 way,"Terminal block, 5.08 mm",Phoenix Contact,1715734,"Pressure transducer, DS18B20 probe"
+J2,1,JST-XH 4 pin,"Header, 2.50 mm, vertical",JST,B4B-XH-A(LF)(SN),To the HT16K33 display

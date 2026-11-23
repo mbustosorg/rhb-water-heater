@@ -1,4 +1,4 @@
 (fp_lib_table
   (version 7)
-  (lib (name "rhb")(type "KiCad")(uri "${KIPRJMOD}/rhb.pretty")(options "")(descr "Footprints generated for this board"))
+  (lib (name "rhb_water_heater")(type "KiCad")(uri "${KIPRJMOD}/rhb_water_heater.pretty")(options "")(descr "Footprints generated for this board"))
 )

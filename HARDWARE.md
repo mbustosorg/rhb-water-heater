@@ -1,7 +1,7 @@
 Water Heater Hardware
 =====================
 
-![Water heater circuit](circuit.svg)
+![Water heater circuit](kicad/circuit.svg)
 
 [kicad/](kicad/README.md) has the carrier board.
 
