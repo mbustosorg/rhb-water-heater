@@ -2,6 +2,7 @@
 # Regenerate the board from the scripts.
 #   ./build.sh             parts, schematic, board, routing, DRC, renders
 #   ./build.sh --no-route  stop after DRC of the unrouted board
+# A hand-laid board has no generate_*.py: this only checks and renders it.
 # Standard file, from ~/.claude/kicad-standard/: copy it, don't edit it here.
 set -e
 cd "$(dirname "$0")"
@@ -23,19 +24,21 @@ if [ -f generate_parts.py ]; then
     echo "== parts"; python3 generate_parts.py
 fi
 
-echo "== schematic"
-python3 generate_schematic.py
-$CLI sch export netlist -o "$P.net" "$P.kicad_sch" >/dev/null
-$CLI sch erc --format json -o erc.json "$P.kicad_sch" >/dev/null
+if [ -f generate_schematic.py ]; then
+    echo "== schematic"
+    python3 generate_schematic.py
+    $CLI sch export netlist -o "$P.net" "$P.kicad_sch" >/dev/null
+fi
 
-echo "== board"
-kpy generate_pcb.py
-
-if [ $ROUTE = 1 ]; then
-    echo "== route"; kpy route.py
+if [ -f generate_pcb.py ]; then
+    echo "== board"; kpy generate_pcb.py
+    if [ $ROUTE = 1 ]; then
+        echo "== route"; kpy route.py
+    fi
 fi
 
 echo "== check"
+$CLI sch erc --format json -o erc.json "$P.kicad_sch" >/dev/null
 $CLI pcb drc --schematic-parity --format json -o drc.json "$P.kicad_pcb" >/dev/null
 python3 - "$ROUTE" <<'EOF'
 import collections, json, sys
